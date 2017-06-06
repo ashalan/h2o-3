@@ -6,6 +6,8 @@ import hex.tree.drf.DRF;
 import hex.tree.drf.DRFModel;
 import hex.tree.gbm.GBM;
 import hex.tree.gbm.GBMModel;
+import hex.tree.xgboost.XGBoost;
+import hex.tree.xgboost.XGBoostModel;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -26,7 +28,7 @@ public class StackedEnsembleTest extends TestUtil {
     @Test public void testBasicEnsemble() {
         // Regression tests
         basicEnsemble("./smalldata/junit/cars.csv",
-                new StackedEnsembleTest.PrepData() { int prep(Frame fr ) {fr.remove("name").remove(); return ~fr.find("economy (mpg)"); }},
+                new StackedEnsembleTest.PrepData() { int prep(Frame fr ) {fr.remove("name").remove(); return ~fr.find("cylinders"); }},
                 false, gaussian);
 
         basicEnsemble("./smalldata/junit/test_tree_minmax.csv",
@@ -55,6 +57,7 @@ public class StackedEnsembleTest extends TestUtil {
     public StackedEnsembleModel.StackedEnsembleOutput basicEnsemble(String fname, StackedEnsembleTest.PrepData prep, boolean validation, DistributionFamily family) {
         GBMModel gbm = null;
         DRFModel drf = null;
+        XGBoostModel xgb = null;
         StackedEnsembleModel stackedEnsembleModel = null;
         Frame fr = null, fr2= null, vfr=null;
         try {
@@ -114,12 +117,32 @@ public class StackedEnsembleTest extends TestUtil {
             drf = drfJob.trainModel().get();
             Assert.assertTrue(drfJob.isStopped()); //HEX-1817
 
+            //Build XGBoost
+            XGBoostModel.XGBoostParameters xgBoostParameters = new XGBoostModel.XGBoostParameters();
+            // Configure XGB
+            xgBoostParameters._train = fr._key;
+            xgBoostParameters._response_column = fr._names[idx];
+            xgBoostParameters._ntrees = 5;
+            xgBoostParameters._distribution = family;
+            xgBoostParameters._max_depth = 4;
+            xgBoostParameters._min_rows = 1;
+            xgBoostParameters._learn_rate = .2f;
+            xgBoostParameters._score_each_iteration = true;
+            xgBoostParameters._fold_assignment = Model.Parameters.FoldAssignmentScheme.Modulo;
+            xgBoostParameters._keep_cross_validation_predictions = true;
+            xgBoostParameters._nfolds = 5;
+            //Inovke XGB and block till the end
+            XGBoost xgbJob = new XGBoost(xgBoostParameters);
+            //Get the model
+            xgb = xgbJob.trainModel().get();
+            Assert.assertTrue(xgbJob.isStopped());
+
             // Build Stacked Ensemble of previous GBM and DRF
             StackedEnsembleModel.StackedEnsembleParameters stackedEnsembleParameters = new StackedEnsembleModel.StackedEnsembleParameters();
             // Configure Stacked Ensemble
             stackedEnsembleParameters._train = fr._key;
             stackedEnsembleParameters._response_column = fr._names[idx];
-            stackedEnsembleParameters._base_models = new Key[] {gbm._key,drf._key};
+            stackedEnsembleParameters._base_models = new Key[] {gbm._key,drf._key,xgb._key};
             // Invoke Stacked Ensemble and block till end
             StackedEnsemble stackedEnsembleJob = new StackedEnsemble(stackedEnsembleParameters);
             // Get the stacked ensemble
@@ -144,6 +167,12 @@ public class StackedEnsembleTest extends TestUtil {
                 for (Key k : drf._output._cross_validation_predictions) k.remove();
                 drf._output._cross_validation_holdout_predictions_frame_id.remove();
                 drf.deleteCrossValidationModels();
+            }
+            if( xgb != null ) {
+                xgb.delete();
+                for (Key k : xgb._output._cross_validation_predictions) k.remove();
+                xgb._output._cross_validation_holdout_predictions_frame_id.remove();
+                xgb.deleteCrossValidationModels();
             }
             if( stackedEnsembleModel != null ) {
                 stackedEnsembleModel.delete();
