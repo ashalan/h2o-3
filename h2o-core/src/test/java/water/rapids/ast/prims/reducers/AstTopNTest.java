@@ -29,7 +29,7 @@ public class AstTopNTest extends TestUtil {
 
 		@BeforeClass
 		public static void setup() {   // randomly generate a frame here.
-				stall_till_cloudsize(1);
+				stall_till_cloudsize(5);
 		}
 
 		//--------------------------------------------------------------------------------------------------------------------
