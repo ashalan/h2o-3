@@ -16,4 +16,9 @@ public class RegisterRestApi extends water.api.AbstractRegister {
   public String getName() {
     return "XGBoost";
   }
+
+  @Override
+  public boolean isEnabled() {
+    return XGBoost.haveBackend();
+  }
 }

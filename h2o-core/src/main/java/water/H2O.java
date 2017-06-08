@@ -867,11 +867,13 @@ final public class H2O {
     List<String> registeredRestApiExts = new ArrayList<>();
     for (RestApiExtension r : restApiExtensionLoader) {
       try {
-        r.register(relativeResourcePath);
-        r.registerEndPoints(dummyRestApiContext);
-        r.registerSchemas(dummyRestApiContext);
-        registeredRestApiExts.add(r.getName());
-        H2O.addRestAPIExtension(r);
+        if(r.isEnabled()) {
+          r.register(relativeResourcePath);
+          r.registerEndPoints(dummyRestApiContext);
+          r.registerSchemas(dummyRestApiContext);
+          registeredRestApiExts.add(r.getName());
+          H2O.addRestAPIExtension(r);
+        }
       } catch (Exception e) {
         Log.info("Cannot register extension: " + r + ". Skipping it...");
       }

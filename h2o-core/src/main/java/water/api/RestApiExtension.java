@@ -35,4 +35,6 @@ public interface RestApiExtension {
 
   /** Provide name of the REST API extension. */
   String getName();
+
+  boolean isEnabled();
 }

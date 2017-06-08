@@ -57,7 +57,7 @@ public class XGBoost extends ModelBuilder<XGBoostModel,XGBoostModel.XGBoostParam
   //
   // FIXME: moved into XGBoost core extension (see PUBDEV-4548)
   //
-  static boolean haveBackend() {
+  public static boolean haveBackend() {
     // Check if some native library was loaded
     try {
       String libName = NativeLibLoader.getLoadedLibraryName();

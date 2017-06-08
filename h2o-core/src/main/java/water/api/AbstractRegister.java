@@ -49,4 +49,8 @@ public abstract class AbstractRegister implements RestApiExtension {
                  "grid_search_" + lbase,
                  "Run grid search for "+base+" model.");
   }
+
+  public boolean isEnabled(){
+    return true;
+  }
 }
